@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - email: string (required, valid email)
+    //   - role: string (required, ['user', 'admin'])
+    //   - createdAt: string (required, ISO 8601)
+    //
+    // Collection: complaints
+    // Document ID: {complaintId}
+    // Fields:
+    //   - userId: string (required, matches auth.uid)
+    //   - userName: string (required)
+    //   - type: string (required, ['पाणी', 'रस्ता', 'गटार', 'इतर'])
+    //   - description: string (required, 1-1000 chars)
+    //   - status: string (required, ['प्रलंबित', 'प्रगतीपथावर', 'पूर्ण'])
+    //   - createdAt: string (required, ISO 8601)
+    //
+    // Collection: notices
+    // Document ID: {noticeId}
+    // Fields:
+    //   - title: string (required, 1-200 chars)
+    //   - content: string (required, 1-5000 chars)
+    //   - date: string (required)
+    //   - time: string (optional)
+    //   - createdAt: string (required, ISO 8601)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "gpgugwad@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'email', 'role', 'createdAt']) &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.role in ['user', 'admin'] &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidComplaint(data) {
+      return hasOnlyAllowedFields(['userId', 'userName', 'type', 'description', 'status', 'createdAt']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 &&
+             data.type in ['पाणी', 'रस्ता', 'गटार', 'इतर'] &&
+             data.description is string && data.description.size() >= 1 && data.description.size() <= 1000 &&
+             data.status in ['प्रलंबित', 'प्रगतीपथावर', 'पूर्ण'] &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidNotice(data) {
+      return hasOnlyAllowedFields(['title', 'content', 'date', 'time', 'createdAt']) &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 5000 &&
+             data.date is string &&
+             isValidDateString(data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(uid) && isValidUser(request.resource.data) && 
+                      (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(uid) && isValidUser(request.resource.data) && 
+                      (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /complaints/{complaintId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidComplaint(request.resource.data);
+      allow update: if isAdmin() && isValidComplaint(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /notices/{noticeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidNotice(request.resource.data);
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

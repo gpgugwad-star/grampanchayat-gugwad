@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2d6a4f;
+  --color-primary-light: #d8f3dc;
+  --color-accent: #40916c;
+  --color-bg: #f8faf9;
+  --color-text-dark: #1b4332;
+  --color-text-muted: #52796f;
+  --color-border-theme: #e0e7e1;
+  
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-text-dark font-sans;
+  }
+}

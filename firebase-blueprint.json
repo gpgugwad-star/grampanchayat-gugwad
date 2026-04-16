@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user information and roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "Full name of the user" },
+        "email": { "type": "string", "description": "Email address" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "User role" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "description": "A complaint registered by a villager.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of the user who registered the complaint" },
+        "userName": { "type": "string", "description": "Name of the user" },
+        "type": { "type": "string", "enum": ["पाणी", "रस्ता", "गटार", "इतर"], "description": "Type of complaint" },
+        "description": { "type": "string", "description": "Detailed description of the complaint" },
+        "status": { "type": "string", "enum": ["प्रलंबित", "प्रगतीपथावर", "पूर्ण"], "description": "Current status" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "description", "status", "createdAt"]
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "Official notices from the Gram Panchayat.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the notice" },
+        "content": { "type": "string", "description": "Detailed content" },
+        "date": { "type": "string", "description": "Display date" },
+        "time": { "type": "string", "description": "Display time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "date", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "/complaints/{complaintId}": {
+      "schema": "Complaint",
+      "description": "User complaints"
+    },
+    "/notices/{noticeId}": {
+      "schema": "Notice",
+      "description": "Official notices"
+    }
+  }
+}
